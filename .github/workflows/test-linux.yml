@@ -1,4 +1,4 @@
-name: Test MCP Server
+name: Test MCP Server - Linux
 
 on:
   push:
@@ -9,21 +9,16 @@ on:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.12"]
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.12
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.12"
     
     - name: Install uv
       uses: astral-sh/setup-uv@v5
@@ -34,7 +29,6 @@ jobs:
       run: uv sync
     
     - name: Setup display (Linux)
-      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get install -y xvfb
