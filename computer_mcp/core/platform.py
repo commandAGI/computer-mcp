@@ -13,7 +13,8 @@ if IS_LINUX:
     try:
         import gi  # pyright: ignore[reportMissingImports]
         gi.require_version('Atspi', '2.0')
-        from gi.repository import Atspi
+        from gi.repository import Atspi  # noqa: F401
         IS_LINUX_ACCESSIBILITY_MODULES_SUPPORTED = True
     except (ImportError, ValueError):
         pass
+
