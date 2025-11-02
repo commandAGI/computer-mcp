@@ -21,5 +21,10 @@ async def main():
         )
 
 
-if __name__ == "__main__":
+def entry_point():
+    """Synchronous entry point for setuptools console script."""
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    entry_point()
