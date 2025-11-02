@@ -33,12 +33,14 @@ Configure this server in your MCP client (e.g., Cursor, Claude Desktop):
 {
   "mcpServers": {
     "computer-mcp": {
-      "command": "python",
-      "args": ["path/to/computer-mcp/main.py"]
+      "command": "uvx",
+      "args": ["computer-mcp"]
     }
   }
 }
 ```
+
+**Note**: `uvx` automatically installs and runs the package if not already installed. Make sure you have [uv](https://github.com/astral-sh/uv) installed.
 
 ### Available Tools
 
