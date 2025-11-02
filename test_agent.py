@@ -22,10 +22,10 @@ async def main():
         test_file.unlink()
         print(f"Cleaned up existing {test_file}")
     
-    # Server parameters - use uv run to execute the server
+    # Server parameters - use uv run to execute the server as a module
     server_params = StdioServerParameters(
         command="uv",
-        args=["run", "python", str(Path(__file__).parent / "main.py")]
+        args=["run", "python", "-m", "computer_mcp.main"]
     )
     
     print("Connecting to MCP server...")
@@ -34,7 +34,7 @@ async def main():
             async with ClientSession(read, write) as session:
                 # Initialize the session
                 init_result = await session.initialize()
-                print(f"✅ Server initialized: {init_result.server_info.name if init_result else 'OK'}")
+                print(f"✅ Server initialized: {init_result.serverInfo.name if init_result else 'OK'}")
                 
                 # List available tools
                 tools_result = await session.list_tools()

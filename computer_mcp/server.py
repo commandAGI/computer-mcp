@@ -7,7 +7,7 @@ from mcp.types import Tool, TextContent
 from pynput.keyboard import Controller as KeyboardController
 from pynput.mouse import Controller as MouseController
 
-from core.state import ComputerState
+from computer_mcp.core.state import ComputerState
 from computer_mcp.handlers import config, keyboard, mouse, screenshot
 
 

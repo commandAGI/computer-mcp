@@ -8,7 +8,7 @@ import asyncio
 
 from mcp.server.stdio import stdio_server
 
-from server import server
+from computer_mcp.server import server
 
 
 async def main():
