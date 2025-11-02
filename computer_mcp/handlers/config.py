@@ -1,10 +1,10 @@
 """Configuration handler."""
 
-import json
-from typing import Any
+from typing import Any, Union
 
-from mcp.types import TextContent
+from mcp.types import ImageContent, TextContent
 
+from computer_mcp.core.response import format_response
 from computer_mcp.core.state import ComputerState
 
 
@@ -12,7 +12,7 @@ def handle_set_config(
     arguments: dict[str, Any],
     state: ComputerState,
     mouse_controller  # noqa: ARG001
-) -> list[TextContent]:
+) -> list[Union[TextContent, ImageContent]]:
     """Handle set_config action."""
     # Update configuration
     if "observe_screen" in arguments:
@@ -38,5 +38,5 @@ def handle_set_config(
         "action": "set_config",
         "config": state.config.copy()
     }
-    return [TextContent(type="text", text=json.dumps(result))]
+    return format_response(result, state)
 

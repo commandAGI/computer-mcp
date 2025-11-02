@@ -1,11 +1,11 @@
 """Mouse action handlers."""
 
-import json
 import time
-from typing import Any
+from typing import Any, Union
 
-from mcp.types import TextContent
+from mcp.types import ImageContent, TextContent
 
+from computer_mcp.core.response import format_response
 from computer_mcp.core.state import ComputerState
 from computer_mcp.core.utils import button_from_string
 
@@ -14,77 +14,67 @@ def handle_click(
     arguments: dict[str, Any],
     state: ComputerState,
     mouse_controller
-) -> list[TextContent]:
+) -> list[Union[TextContent, ImageContent]]:
     """Handle click action."""
     button = button_from_string(arguments.get("button", "left"))
     mouse_controller.click(button)
-    result_state = state.get_state()
     result = {"success": True, "action": "click", "button": arguments.get("button", "left")}
-    result.update(result_state)
-    return [TextContent(type="text", text=json.dumps(result))]
+    return format_response(result, state)
 
 
 def handle_double_click(
     arguments: dict[str, Any],
     state: ComputerState,
     mouse_controller
-) -> list[TextContent]:
+) -> list[Union[TextContent, ImageContent]]:
     """Handle double_click action."""
     button = button_from_string(arguments.get("button", "left"))
     mouse_controller.click(button, 2)
-    result_state = state.get_state()
     result = {"success": True, "action": "double_click", "button": arguments.get("button", "left")}
-    result.update(result_state)
-    return [TextContent(type="text", text=json.dumps(result))]
+    return format_response(result, state)
 
 
 def handle_triple_click(
     arguments: dict[str, Any],
     state: ComputerState,
     mouse_controller
-) -> list[TextContent]:
+) -> list[Union[TextContent, ImageContent]]:
     """Handle triple_click action."""
     button = button_from_string(arguments.get("button", "left"))
     mouse_controller.click(button, 3)
-    result_state = state.get_state()
     result = {"success": True, "action": "triple_click", "button": arguments.get("button", "left")}
-    result.update(result_state)
-    return [TextContent(type="text", text=json.dumps(result))]
+    return format_response(result, state)
 
 
 def handle_button_down(
     arguments: dict[str, Any],
     state: ComputerState,
     mouse_controller
-) -> list[TextContent]:
+) -> list[Union[TextContent, ImageContent]]:
     """Handle button_down action."""
     button = button_from_string(arguments.get("button", "left"))
     mouse_controller.press(button)
-    result_state = state.get_state()
     result = {"success": True, "action": "button_down", "button": arguments.get("button", "left")}
-    result.update(result_state)
-    return [TextContent(type="text", text=json.dumps(result))]
+    return format_response(result, state)
 
 
 def handle_button_up(
     arguments: dict[str, Any],
     state: ComputerState,
     mouse_controller
-) -> list[TextContent]:
+) -> list[Union[TextContent, ImageContent]]:
     """Handle button_up action."""
     button = button_from_string(arguments.get("button", "left"))
     mouse_controller.release(button)
-    result_state = state.get_state()
     result = {"success": True, "action": "button_up", "button": arguments.get("button", "left")}
-    result.update(result_state)
-    return [TextContent(type="text", text=json.dumps(result))]
+    return format_response(result, state)
 
 
 def handle_drag(
     arguments: dict[str, Any],
     state: ComputerState,
     mouse_controller
-) -> list[TextContent]:
+) -> list[Union[TextContent, ImageContent]]:
     """Handle drag action."""
     start = arguments["start"]
     end = arguments["end"]
@@ -98,23 +88,19 @@ def handle_drag(
     time.sleep(0.01)
     mouse_controller.release(button)
     
-    result_state = state.get_state()
     result = {"success": True, "action": "drag", "start": start, "end": end, "button": arguments.get("button", "left")}
-    result.update(result_state)
-    return [TextContent(type="text", text=json.dumps(result))]
+    return format_response(result, state)
 
 
 def handle_mouse_move(
     arguments: dict[str, Any],
     state: ComputerState,
     mouse_controller
-) -> list[TextContent]:
+) -> list[Union[TextContent, ImageContent]]:
     """Handle mouse_move action."""
     x = arguments["x"]
     y = arguments["y"]
     mouse_controller.position = (x, y)
-    result_state = state.get_state()
     result = {"success": True, "action": "mouse_move", "x": x, "y": y}
-    result.update(result_state)
-    return [TextContent(type="text", text=json.dumps(result))]
+    return format_response(result, state)
 

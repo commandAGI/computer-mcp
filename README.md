@@ -6,7 +6,7 @@ A cross-platform Model Context Protocol (MCP) server for computer automation and
 
 - **Mouse Control**: Click, double-click, triple-click, button down/up, drag operations
 - **Keyboard Control**: Type text, key down/up/press
-- **Screenshot Capture**: Fast cross-platform screenshot using `mss`, returns base64-encoded PNG (included by default)
+- **Screenshot Capture**: Fast cross-platform screenshot using `mss`, returns images as MCP ImageContent (included by default)
 - **State Tracking**: Configurable tracking of mouse position/buttons, keyboard keys, focused app, and accessibility tree
 - **Accessibility Tree**: Full platform-specific implementation for Windows, macOS, and Linux/Ubuntu
 - **Zero Config**: Screenshots included by default - no need to call screenshot tool separately
@@ -152,7 +152,11 @@ The `set_config` tool accepts the following options:
 
 ## Response Format
 
-By default (with `observe_screen: true`), all tool responses include a screenshot:
+By default (with `observe_screen: true`), all tool responses include a screenshot as MCP `ImageContent`, which displays as an actual image in MCP clients:
+
+**Response Structure:**
+- `ImageContent` (type: "image"): Contains the screenshot as base64-encoded PNG with mimeType "image/png"
+- `TextContent` (type: "text"): Contains JSON with action results and screenshot metadata:
 
 ```json
 {
@@ -161,14 +165,13 @@ By default (with `observe_screen: true`), all tool responses include a screensho
   "button": "left",
   "screenshot": {
     "format": "base64_png",
-    "data": "iVBORw0KGgoAAAANSUhEUgAA...",
     "width": 1920,
     "height": 1080
   }
 }
 ```
 
-With full observation enabled:
+With full observation enabled, the TextContent includes additional state:
 
 ```json
 {
@@ -176,7 +179,9 @@ With full observation enabled:
   "action": "click",
   "button": "left",
   "screenshot": {
-    { "format": "base64_png", "data": "...", "width": 1920, "height": 1080 }
+    "format": "base64_png",
+    "width": 1920,
+    "height": 1080
   },
   "mouse_position": {"x": 500, "y": 300},
   "mouse_button_states": ["Button.left"],
@@ -196,6 +201,8 @@ With full observation enabled:
   }
 }
 ```
+
+**Note:** Screenshots are returned as `ImageContent` objects that display as actual images in MCP clients. The base64 image data is only included in the `ImageContent`, not in the JSON metadata.
 
 ## Architecture
 

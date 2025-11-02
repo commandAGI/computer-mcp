@@ -1,5 +1,8 @@
 """Utility functions."""
 
+from typing import Any, Optional
+
+from mcp.types import ImageContent
 from pynput.keyboard import Key, KeyCode
 from pynput.mouse import Button
 
@@ -47,4 +50,41 @@ def button_from_string(button_str: str) -> Button:
         return Button.middle
     else:
         return Button.left
+
+
+def screenshot_to_image_content(screenshot_data: dict[str, Any]) -> Optional[ImageContent]:
+    """Convert screenshot data dictionary to MCP ImageContent.
+    
+    Args:
+        screenshot_data: Dictionary with 'format', 'data' (base64), 'width', 'height'
+        
+    Returns:
+        ImageContent if screenshot data is valid, None otherwise
+    """
+    if not screenshot_data or "error" in screenshot_data:
+        return None
+    
+    # Extract base64 data (with or without data URI prefix)
+    data = screenshot_data.get("data", "")
+    if not data:
+        return None
+    
+    # Remove data URI prefix if present (data:image/png;base64,)
+    if data.startswith("data:image"):
+        data = data.split(",", 1)[1]
+    
+    # Determine MIME type from format or default to PNG
+    format_str = screenshot_data.get("format", "base64_png").lower()
+    if "png" in format_str:
+        mime_type = "image/png"
+    elif "jpeg" in format_str or "jpg" in format_str:
+        mime_type = "image/jpeg"
+    else:
+        mime_type = "image/png"  # Default to PNG
+    
+    return ImageContent(
+        type="image",
+        data=data,
+        mimeType=mime_type
+    )
 

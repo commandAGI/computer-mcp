@@ -1,9 +1,9 @@
 """MCP server setup and tool definitions."""
 
-from typing import Any
+from typing import Any, Union
 
 from mcp.server import Server
-from mcp.types import Tool, TextContent
+from mcp.types import ImageContent, Tool, TextContent
 from pynput.keyboard import Controller as KeyboardController
 from pynput.mouse import Controller as MouseController
 
@@ -240,7 +240,7 @@ async def list_tools() -> list[Tool]:
 
 
 @server.call_tool()
-async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
+async def call_tool(name: str, arguments: dict[str, Any]) -> list[Union[TextContent, ImageContent]]:
     """Handle tool calls."""
     import json
     
