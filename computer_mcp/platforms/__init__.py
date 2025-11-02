@@ -9,13 +9,13 @@ def get_focused_app() -> dict[str, Any]:
     system = platform.system()
     try:
         if system == "Windows":
-            from . import windows
+            from computer_mcp.platforms import windows
             return windows.get_focused_app()
         elif system == "Darwin":
-            from . import macos
+            from computer_mcp.platforms import macos
             return macos.get_focused_app()
         elif system == "Linux":
-            from . import linux
+            from computer_mcp.platforms import linux
             return linux.get_focused_app()
         else:
             return {"error": f"Unsupported platform: {system}"}
@@ -28,13 +28,13 @@ def get_accessibility_tree() -> dict[str, Any]:
     system = platform.system()
     try:
         if system == "Windows":
-            from . import windows
+            from computer_mcp.platforms import windows
             return windows.get_accessibility_tree()
         elif system == "Darwin":
-            from . import macos
+            from computer_mcp.platforms import macos
             return macos.get_accessibility_tree()
         elif system == "Linux":
-            from . import linux
+            from computer_mcp.platforms import linux
             return linux.get_accessibility_tree()
         else:
             return {"error": f"Unsupported platform: {system}"}

@@ -5,8 +5,8 @@ from typing import Any
 
 from mcp.types import TextContent
 
-from core.screenshot import capture_screenshot
-from core.state import ComputerState
+from computer_mcp.core.screenshot import capture_screenshot
+from computer_mcp.core.state import ComputerState
 
 
 def handle_screenshot(

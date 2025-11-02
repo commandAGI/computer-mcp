@@ -6,7 +6,7 @@ from pynput import keyboard, mouse
 from pynput.keyboard import Controller as KeyboardController, Key, KeyCode
 from pynput.mouse import Button, Controller as MouseController
 
-from core.screenshot import capture_screenshot
+from computer_mcp.core.screenshot import capture_screenshot
 
 
 class ComputerState:

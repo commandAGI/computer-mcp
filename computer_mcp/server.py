@@ -8,7 +8,7 @@ from pynput.keyboard import Controller as KeyboardController
 from pynput.mouse import Controller as MouseController
 
 from core.state import ComputerState
-from handlers import config, keyboard, mouse, screenshot
+from computer_mcp.handlers import config, keyboard, mouse, screenshot
 
 
 # Global state instance

@@ -5,7 +5,7 @@ from typing import Any
 
 from mcp.types import TextContent
 
-from ..core.state import ComputerState
+from computer_mcp.core.state import ComputerState
 
 
 def handle_set_config(

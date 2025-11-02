@@ -5,8 +5,8 @@ from typing import Any
 
 from mcp.types import TextContent
 
-from core.state import ComputerState
-from core.utils import key_from_string
+from computer_mcp.core.state import ComputerState
+from computer_mcp.core.utils import key_from_string
 
 
 def handle_type(
