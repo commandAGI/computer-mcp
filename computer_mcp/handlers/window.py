@@ -848,67 +848,45 @@ if IS_WINDOWS:
     ) -> list[Union[TextContent, ImageContent]]:
         """Handle list_virtual_desktops action."""
         try:
-            import subprocess
-            import json
+            from computer_mcp.core.virtual_desktop import (
+                is_available,
+                get_desktop_count,
+                get_current_desktop_number
+            )
             
-            # Use PowerShell to list virtual desktops
-            ps_script = '''
-            $desktops = Get-DesktopList
-            $result = @()
-            $index = 0
-            foreach ($desktop in $desktops) {
-                $result += @{
-                    id = $index
-                    name = "Desktop $($index + 1)"
-                    is_current = ($desktop -eq (Get-CurrentDesktop))
+            if not is_available():
+                result = {
+                    "success": True,
+                    "action": "list_virtual_desktops",
+                    "desktops": [{"id": 0, "name": "Desktop 1", "is_current": True}],
+                    "note": "VirtualDesktopAccessor.dll not available. Basic single desktop returned."
                 }
-                $index++
-            }
-            $result | ConvertTo-Json
-            '''
+                return format_response(result, state)
             
-            # Try using VirtualDesktopAccessor.dll if available, otherwise use basic enumeration
-            try:
-                result_ps = subprocess.run(
-                    ["powershell", "-Command", ps_script],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                    check=False
-                )
-                
-                if result_ps.returncode == 0:
-                    desktops = json.loads(result_ps.stdout)
-                    result = {"success": True, "action": "list_virtual_desktops", "desktops": desktops}
-                    return format_response(result, state)
-            except Exception:
-                pass
+            count = get_desktop_count()
+            current = get_current_desktop_number()
             
-            # Fallback: Use Windows Desktop API via PowerShell
-            ps_script_fallback = '''
-            Add-Type -TypeDefinition @"
-            using System;
-            using System.Runtime.InteropServices;
-            public class VirtualDesktop {
-                [DllImport("user32.dll")]
-                public static extern IntPtr GetDesktopWindow();
-            }
-"@
-            $count = [VirtualDesktop]::GetDesktopCount()
-            $current = [VirtualDesktop]::GetCurrentDesktopIndex()
-            @{
-                count = $count
-                current = $current
-                desktops = 1..$count | ForEach-Object { @{id = $_ - 1; name = "Desktop $_"; is_current = ($_ - 1 -eq $current)} }
-            } | ConvertTo-Json
-            '''
+            if count is None:
+                result = {
+                    "success": True,
+                    "action": "list_virtual_desktops",
+                    "desktops": [{"id": 0, "name": "Desktop 1", "is_current": True}],
+                    "note": "Failed to get desktop count. Basic single desktop returned."
+                }
+                return format_response(result, state)
             
-            # Since direct API access is complex, provide basic info
+            desktops = []
+            for i in range(count):
+                desktops.append({
+                    "id": i,
+                    "name": f"Desktop {i + 1}",
+                    "is_current": i == current if current is not None else False
+                })
+            
             result = {
                 "success": True,
                 "action": "list_virtual_desktops",
-                "desktops": [{"id": 0, "name": "Desktop 1", "is_current": True}],
-                "note": "Virtual desktop enumeration requires VirtualDesktopAccessor.dll or similar. Basic single desktop returned."
+                "desktops": desktops
             }
             return format_response(result, state)
         except Exception as e:
@@ -922,7 +900,11 @@ if IS_WINDOWS:
     ) -> list[Union[TextContent, ImageContent]]:
         """Handle switch_virtual_desktop action."""
         try:
-            import subprocess
+            from computer_mcp.core.virtual_desktop import (
+                is_available,
+                go_to_desktop_number,
+                get_desktop_count
+            )
             
             desktop_id = arguments.get("desktop_id")
             name = arguments.get("name")
@@ -940,37 +922,30 @@ if IS_WINDOWS:
                     result = {"error": f"Could not parse desktop ID from name: {name}"}
                     return format_response(result, state)
             
-            # Use Ctrl+Win+Left/Right arrow keys to switch
-            # This is the standard Windows shortcut
-            # We'll use keyboard simulation
-            from pynput.keyboard import Controller as KeyboardController
-            from pynput.keyboard import Key
+            if not is_available():
+                result = {
+                    "error": "Virtual desktop switching requires VirtualDesktopAccessor.dll",
+                    "note": "VirtualDesktopAccessor.dll not found. Please ensure it's available in the resources directory."
+                }
+                return format_response(result, state)
             
-            keyboard = KeyboardController()
+            # Validate desktop number
+            count = get_desktop_count()
+            if count is not None and desktop_id >= count:
+                result = {
+                    "error": f"Desktop number {desktop_id} is out of range. Available desktops: 0-{count - 1}"
+                }
+                return format_response(result, state)
             
-            # Determine direction based on current vs target
-            # For now, we'll just try to switch using the keyboard shortcut
-            # This requires knowing current desktop which is complex
+            # Switch to the desktop
+            success = go_to_desktop_number(desktop_id)
             
-            # Alternative: Use PowerShell with VirtualDesktopAccessor
-            ps_script = f'''
-            Switch-Desktop {desktop_id}
-            '''
-            
-            result_ps = subprocess.run(
-                ["powershell", "-Command", ps_script],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False
-            )
-            
-            if result_ps.returncode == 0:
+            if success:
                 result = {"success": True, "action": "switch_virtual_desktop", "desktop_id": desktop_id}
             else:
                 result = {
-                    "error": "Virtual desktop switching requires VirtualDesktopAccessor.dll",
-                    "note": "Install VirtualDesktopAccessor PowerShell module or use keyboard shortcuts manually"
+                    "error": f"Failed to switch to desktop {desktop_id}",
+                    "note": "The desktop number may be invalid or the operation failed."
                 }
             
             return format_response(result, state)
@@ -985,7 +960,11 @@ if IS_WINDOWS:
     ) -> list[Union[TextContent, ImageContent]]:
         """Handle move_window_to_virtual_desktop action."""
         try:
-            import subprocess
+            from computer_mcp.core.virtual_desktop import (
+                is_available,
+                move_window_to_desktop_number,
+                get_desktop_count
+            )
             
             hwnd = arguments.get("hwnd")
             desktop_id = arguments.get("desktop_id")
@@ -998,26 +977,43 @@ if IS_WINDOWS:
                 result = {"error": "'desktop_id' parameter is required"}
                 return format_response(result, state)
             
-            # Use PowerShell with VirtualDesktopAccessor
-            ps_script = f'''
-            $hwnd = {hwnd}
-            Move-WindowToDesktop $hwnd {desktop_id}
-            '''
-            
-            result_ps = subprocess.run(
-                ["powershell", "-Command", ps_script],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False
-            )
-            
-            if result_ps.returncode == 0:
-                result = {"success": True, "action": "move_window_to_virtual_desktop", "hwnd": hwnd, "desktop_id": desktop_id}
-            else:
+            if not is_available():
                 result = {
                     "error": "Virtual desktop window moving requires VirtualDesktopAccessor.dll",
-                    "note": "Install VirtualDesktopAccessor PowerShell module for this functionality"
+                    "note": "VirtualDesktopAccessor.dll not found. Please ensure it's available in the resources directory."
+                }
+                return format_response(result, state)
+            
+            # Validate desktop number
+            count = get_desktop_count()
+            if count is not None and desktop_id >= count:
+                result = {
+                    "error": f"Desktop number {desktop_id} is out of range. Available desktops: 0-{count - 1}"
+                }
+                return format_response(result, state)
+            
+            # Validate window handle
+            if not isinstance(hwnd, int):
+                try:
+                    hwnd = int(hwnd)
+                except (ValueError, TypeError):
+                    result = {"error": f"Invalid window handle: {hwnd}"}
+                    return format_response(result, state)
+            
+            # Move the window
+            success = move_window_to_desktop_number(hwnd, desktop_id)
+            
+            if success:
+                result = {
+                    "success": True,
+                    "action": "move_window_to_virtual_desktop",
+                    "hwnd": hwnd,
+                    "desktop_id": desktop_id
+                }
+            else:
+                result = {
+                    "error": f"Failed to move window {hwnd} to desktop {desktop_id}",
+                    "note": "The window handle may be invalid or the desktop number may be out of range."
                 }
             
             return format_response(result, state)
