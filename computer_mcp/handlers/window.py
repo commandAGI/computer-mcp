@@ -88,6 +88,50 @@ if IS_WINDOWS:
         win32gui.EnumWindows(enum_callback, windows)
         return windows[0] if windows else None
 
+    def _set_dpi_aware_win():
+        """Ensure coordinates match physical pixels on high-DPI displays."""
+        try:
+            import ctypes
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
+
+    def _check_exit_fullscreen_win(hwnd: int):
+        """Restore if window is maximized so it can be resized/moved."""
+        try:
+            import win32gui
+            import win32con
+            placement = win32gui.GetWindowPlacement(hwnd)
+            if placement[1] == win32con.SW_SHOWMAXIMIZED:
+                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+        except Exception:
+            pass
+
+    def _get_work_area_for_window(hwnd: int) -> tuple[int, int, int, int]:
+        """Get work area (excluding taskbar) for the monitor containing the window.
+        
+        Returns:
+            Tuple of (left, top, right, bottom) coordinates
+        """
+        try:
+            import win32api
+            import win32con
+            monitor = win32api.MonitorFromWindow(hwnd, win32con.MONITOR_DEFAULTTONEAREST)
+            mi = win32api.GetMonitorInfo(monitor)
+            work = mi['Work']  # Returns (left, top, right, bottom)
+            return work
+        except Exception:
+            # Fallback to primary screen
+            try:
+                import win32api
+                import win32con
+                width = win32api.GetSystemMetrics(win32con.SM_CXSCREEN)
+                height = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
+                # Assume taskbar is at bottom, ~40px high
+                return (0, 0, width, height - 40)
+            except Exception:
+                return (0, 0, 1920, 1040)  # Conservative fallback
+
     def handle_list_windows(
         arguments: dict[str, Any],
         state: ComputerState,
@@ -178,6 +222,9 @@ if IS_WINDOWS:
             return format_response(result, state)
         
         try:
+            _set_dpi_aware_win()
+            _check_exit_fullscreen_win(hwnd)
+            
             flags = win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
             if width is None or height is None:
                 # Just move, don't resize
@@ -220,6 +267,9 @@ if IS_WINDOWS:
             return format_response(result, state)
         
         try:
+            _set_dpi_aware_win()
+            _check_exit_fullscreen_win(hwnd)
+            
             # Get current position
             rect = win32gui.GetWindowRect(hwnd)
             x = rect[0]
@@ -402,7 +452,7 @@ if IS_WINDOWS:
             return format_response(result, state)
 
     def _get_screen_dimensions() -> tuple[int, int]:
-        """Get primary screen dimensions."""
+        """Get primary screen dimensions (legacy - use _get_work_area_for_window for better results)."""
         try:
             import win32api
             import win32con
@@ -431,11 +481,18 @@ if IS_WINDOWS:
             return format_response(result, state)
         
         try:
-            screen_width, screen_height = _get_screen_dimensions()
-            x = 0
-            y = 0
-            width = screen_width // 2
-            height = screen_height
+            _set_dpi_aware_win()
+            _check_exit_fullscreen_win(hwnd)
+            
+            # Get work area for the monitor containing this window (excludes taskbar)
+            left, top, right, bottom = _get_work_area_for_window(hwnd)
+            work_width = right - left
+            work_height = bottom - top
+            
+            x = left
+            y = top
+            width = work_width // 2
+            height = work_height
             
             flags = win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
             win32gui.SetWindowPos(hwnd, 0, x, y, width, height, flags)
@@ -466,11 +523,18 @@ if IS_WINDOWS:
             return format_response(result, state)
         
         try:
-            screen_width, screen_height = _get_screen_dimensions()
-            x = screen_width // 2
-            y = 0
-            width = screen_width // 2
-            height = screen_height
+            _set_dpi_aware_win()
+            _check_exit_fullscreen_win(hwnd)
+            
+            # Get work area for the monitor containing this window (excludes taskbar)
+            left, top, right, bottom = _get_work_area_for_window(hwnd)
+            work_width = right - left
+            work_height = bottom - top
+            
+            x = left + (work_width // 2)
+            y = top
+            width = work_width - (work_width // 2)  # Remaining half
+            height = work_height
             
             flags = win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
             win32gui.SetWindowPos(hwnd, 0, x, y, width, height, flags)
@@ -501,11 +565,18 @@ if IS_WINDOWS:
             return format_response(result, state)
         
         try:
-            screen_width, screen_height = _get_screen_dimensions()
-            x = 0
-            y = 0
-            width = screen_width
-            height = screen_height // 2
+            _set_dpi_aware_win()
+            _check_exit_fullscreen_win(hwnd)
+            
+            # Get work area for the monitor containing this window (excludes taskbar)
+            left, top, right, bottom = _get_work_area_for_window(hwnd)
+            work_width = right - left
+            work_height = bottom - top
+            
+            x = left
+            y = top
+            width = work_width
+            height = work_height // 2
             
             flags = win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
             win32gui.SetWindowPos(hwnd, 0, x, y, width, height, flags)
@@ -536,11 +607,18 @@ if IS_WINDOWS:
             return format_response(result, state)
         
         try:
-            screen_width, screen_height = _get_screen_dimensions()
-            x = 0
-            y = screen_height // 2
-            width = screen_width
-            height = screen_height // 2
+            _set_dpi_aware_win()
+            _check_exit_fullscreen_win(hwnd)
+            
+            # Get work area for the monitor containing this window (excludes taskbar)
+            left, top, right, bottom = _get_work_area_for_window(hwnd)
+            work_width = right - left
+            work_height = bottom - top
+            
+            x = left
+            y = top + (work_height // 2)
+            width = work_width
+            height = work_height - (work_height // 2)  # Remaining half
             
             flags = win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
             win32gui.SetWindowPos(hwnd, 0, x, y, width, height, flags)
