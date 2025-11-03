@@ -109,12 +109,12 @@ class ComputerState:
         
         # Focused app
         if self.config["observe_focused_app"]:
-            from computer_mcp.handlers.focused_app import get_focused_app as get_focused_app_impl
+            from computer_mcp.actions.focused_app import get_focused_app as get_focused_app_impl
             state["focused_app"] = get_focused_app_impl()
         
         # Accessibility tree
         if self.config["observe_accessibility_tree"]:
-            from computer_mcp.handlers.accessibility_tree import get_accessibility_tree as get_accessibility_tree_impl
+            from computer_mcp.actions.accessibility_tree import get_accessibility_tree as get_accessibility_tree_impl
             state["accessibility_tree"] = get_accessibility_tree_impl()
         
         return state

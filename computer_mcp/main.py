@@ -1,24 +1,18 @@
 #!/usr/bin/env python3
 """
 Computer MCP Server
-Main entry point for the MCP server.
+Main entry point for the MCP server (stdio mode, default).
+For CLI and HTTP/SSE modes, use: python -m computer_mcp
 """
 
 import asyncio
 
-from mcp.server.stdio import stdio_server
-
-from computer_mcp.server import server
+from computer_mcp.mcp import run_stdio
 
 
 async def main():
-    """Main entry point."""
-    async with stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream,
-            write_stream,
-            server.create_initialization_options()
-        )
+    """Main entry point for stdio MCP server."""
+    await run_stdio()
 
 
 def entry_point():
