@@ -781,23 +781,60 @@ if IS_WINDOWS:
             return format_response(result, state)
         
         try:
-            # Get window bounds
+            # Check if window exists and is valid
+            if not win32gui.IsWindow(hwnd):
+                result = {"error": "Invalid window handle"}
+                return format_response(result, state)
+            
+            # Bring window to foreground before capturing
+            # Restore if minimized, then activate
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            win32gui.SetForegroundWindow(hwnd)
+            
+            # Small delay to ensure window is fully in foreground
+            import time
+            time.sleep(0.1)
+            
+            # Get window bounds (including non-client area)
             rect = win32gui.GetWindowRect(hwnd)
             width = rect[2] - rect[0]
             height = rect[3] - rect[1]
             
-            # Create device context for window
-            hwnd_dc = win32gui.GetWindowDC(hwnd)
-            mfc_dc = win32ui.CreateDCFromHandle(hwnd_dc)
-            save_dc = mfc_dc.CreateCompatibleDC()
+            if width <= 0 or height <= 0:
+                result = {"error": "Window has invalid dimensions"}
+                return format_response(result, state)
             
-            # Create bitmap
+            # Get client area bounds (excluding title bar, borders)
+            client_rect = win32gui.GetClientRect(hwnd)
+            client_width = client_rect[2] - client_rect[0]
+            client_height = client_rect[3] - client_rect[1]
+            
+            # Get client area coordinates in screen space (for screen capture)
+            client_point_left_top = win32gui.ClientToScreen(hwnd, (0, 0))
+            client_point_right_bottom = win32gui.ClientToScreen(hwnd, (client_width, client_height))
+            
+            client_screen_x = client_point_left_top[0]
+            client_screen_y = client_point_left_top[1]
+            
+            # Create a memory DC compatible with the screen
+            screen_dc = win32gui.GetDC(0)
+            mem_dc = win32ui.CreateDCFromHandle(screen_dc)
+            save_dc = mem_dc.CreateCompatibleDC()
+            
+            # Create bitmap for the exact client area size
             bitmap = win32ui.CreateBitmap()
-            bitmap.CreateCompatibleBitmap(mfc_dc, width, height)
+            bitmap.CreateCompatibleBitmap(mem_dc, client_width, client_height)
             save_dc.SelectObject(bitmap)
             
-            # Copy window content
-            save_dc.BitBlt((0, 0), (width, height), mfc_dc, (0, 0), win32con.SRCCOPY)
+            # Capture from screen at the window's client area coordinates
+            # This directly captures the screen region where the window's client area is
+            save_dc.BitBlt(
+                (0, 0),
+                (client_width, client_height),
+                mem_dc,
+                (client_screen_x, client_screen_y),
+                win32con.SRCCOPY
+            )
             
             # Convert to PIL Image
             from PIL import Image
@@ -806,9 +843,15 @@ if IS_WINDOWS:
             
             bmp_info = bitmap.GetInfo()
             bmp_str = bitmap.GetBitmapBits(True)
+            
+            # Get actual bitmap dimensions
+            bmp_width = bmp_info["bmWidth"]
+            bmp_height = bmp_info["bmHeight"]
+            
+            # Create image from bitmap data
             img = Image.frombuffer(
                 "RGB",
-                (bmp_info["bmWidth"], bmp_info["bmHeight"]),
+                (bmp_width, bmp_height),
                 bmp_str,
                 "raw",
                 "BGRX",
@@ -816,23 +859,35 @@ if IS_WINDOWS:
                 1
             )
             
+            # The bitmap should already be exactly client_width x client_height since we
+            # created it with those dimensions and BitBlt'd the exact region
+            # Just verify and fix if needed
+            if img.size != (client_width, client_height):
+                if img.size[0] >= client_width and img.size[1] >= client_height:
+                    img = img.crop((0, 0, client_width, client_height))
+                else:
+                    img = img.resize((client_width, client_height), Image.Resampling.LANCZOS)
+            
+            actual_width = client_width
+            actual_height = client_height
+            
+            # Cleanup
+            win32gui.DeleteObject(bitmap.GetHandle())
+            save_dc.DeleteDC()
+            mem_dc.DeleteDC()
+            win32gui.ReleaseDC(0, screen_dc)
+            
             # Convert to base64
             buffer = BytesIO()
             img.save(buffer, format="PNG")
             img_bytes = buffer.getvalue()
             img_base64 = base64.b64encode(img_bytes).decode("utf-8")
             
-            # Cleanup
-            win32gui.DeleteObject(bitmap.GetHandle())
-            save_dc.DeleteDC()
-            mfc_dc.DeleteDC()
-            win32gui.ReleaseDC(hwnd, hwnd_dc)
-            
             screenshot_data = {
                 "format": "base64_png",
                 "data": img_base64,
-                "width": width,
-                "height": height
+                "width": actual_width,
+                "height": actual_height
             }
             
             result = {"success": True, "action": "screenshot_window", "hwnd": hwnd}
@@ -1304,13 +1359,40 @@ elif IS_DARWIN:
             return format_response(result, state)
         
         try:
-            # Get window bounds first
+            # First, bring the window to front by finding it across all processes
+            script_activate = f'''
+            tell application "System Events"
+                repeat with proc in application processes
+                    try
+                        set targetWindow to window id {window_id} of proc
+                        set frontmost of proc to true
+                        set frontmost of targetWindow to true
+                        exit repeat
+                    end try
+                end repeat
+            end tell
+            '''
+            
+            subprocess.run(
+                ["osascript", "-e", script_activate],
+                capture_output=True,
+                timeout=2,
+                check=False
+            )
+            
+            # Small delay to ensure window is fully activated
+            import time
+            time.sleep(0.1)
+            
+            # Get window bounds (window should be frontmost now)
             script_bounds = f'''
             tell application "System Events"
-                tell application process whose frontmost is true
-                    set winBounds to bounds of window id {window_id}
-                    return winBounds
-                end tell
+                repeat with proc in application processes
+                    try
+                        set winBounds to bounds of window id {window_id} of proc
+                        return winBounds
+                    end try
+                end repeat
             end tell
             '''
             
@@ -1786,6 +1868,18 @@ elif IS_LINUX:
             import base64
             from PIL import Image
             import tempfile
+            import time
+            
+            # Bring window to foreground/activate it
+            subprocess.run(
+                ["xdotool", "windowactivate", str(window_id)],
+                capture_output=True,
+                timeout=1,
+                check=False
+            )
+            
+            # Small delay to ensure window is fully activated
+            time.sleep(0.1)
             
             # Get window geometry
             result_geom = subprocess.run(
