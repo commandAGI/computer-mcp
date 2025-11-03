@@ -11,6 +11,20 @@ from io import BytesIO
 
 if IS_WINDOWS:
     import psutil
+    import ctypes
+    from ctypes import wintypes
+
+    # DWM constants
+    DWMWA_EXTENDED_FRAME_BOUNDS = 9
+    _dwmapi = ctypes.windll.dwmapi
+
+    class RECT(ctypes.Structure):
+        _fields_ = [
+            ('left', ctypes.c_long),
+            ('top', ctypes.c_long),
+            ('right', ctypes.c_long),
+            ('bottom', ctypes.c_long)
+        ]
 
     def _is_valid_window(hwnd: int) -> bool:
         """Check if window is valid and visible."""
@@ -131,6 +145,99 @@ if IS_WINDOWS:
                 return (0, 0, width, height - 40)
             except Exception:
                 return (0, 0, 1920, 1040)  # Conservative fallback
+
+    def _get_visible_frame_win(hwnd: int) -> tuple[int, int, int, int]:
+        """
+        Get visible frame bounds (excluding drop shadow) using DWM.
+        Falls back to GetWindowRect if DWM call fails.
+        
+        Returns:
+            Tuple of (left, top, right, bottom) coordinates
+        """
+        try:
+            import win32gui
+            rect = RECT()
+            hr = _dwmapi.DwmGetWindowAttribute(
+                wintypes.HWND(hwnd),
+                ctypes.c_uint(DWMWA_EXTENDED_FRAME_BOUNDS),
+                ctypes.byref(rect),
+                ctypes.sizeof(rect),
+            )
+            if hr == 0:  # S_OK
+                return (rect.left, rect.top, rect.right, rect.bottom)
+        except Exception:
+            pass
+        # Fallback to GetWindowRect
+        try:
+            import win32gui
+            rect = win32gui.GetWindowRect(hwnd)
+            return rect
+        except Exception:
+            return (0, 0, 1920, 1080)
+
+    def _apply_window_bounds_win(hwnd: int, target_ltrb: tuple[int, int, int, int]):
+        """
+        Move/resize window so the visible frame aligns with the target rectangle.
+        Accounts for window chrome/shadow insets by measuring and correcting.
+        
+        Args:
+            hwnd: Window handle
+            target_ltrb: Target bounds as (left, top, right, bottom) for visible frame
+        """
+        try:
+            import win32gui
+            import win32con
+            
+            L, T, R, B = target_ltrb
+            W = max(1, R - L)
+            H = max(1, B - T)
+            
+            # First, set approximate outer bounds
+            win32gui.SetWindowPos(
+                hwnd, 0, L, T, W, H,
+                win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE | win32con.SWP_SHOWWINDOW
+            )
+            
+            # Measure actual visible frame and outer bounds
+            visL, visT, visR, visB = _get_visible_frame_win(hwnd)
+            outL, outT, outR, outB = win32gui.GetWindowRect(hwnd)
+            
+            # Calculate insets
+            inset_left = visL - outL
+            inset_top = visT - outT
+            inset_right = outR - visR
+            inset_bottom = outB - visB
+            
+            # Correct outer bounds to account for insets
+            corrL = L - inset_left
+            corrT = T - inset_top
+            corrW = W + inset_left + inset_right
+            corrH = H + inset_top + inset_bottom
+            
+            corrL = int(round(corrL))
+            corrT = int(round(corrT))
+            corrW = max(1, int(round(corrW)))
+            corrH = max(1, int(round(corrH)))
+            
+            # Apply corrected bounds
+            win32gui.SetWindowPos(
+                hwnd, 0, corrL, corrT, corrW, corrH,
+                win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE | win32con.SWP_SHOWWINDOW
+            )
+        except Exception:
+            # Fallback to simple positioning
+            try:
+                import win32gui
+                import win32con
+                L, T, R, B = target_ltrb
+                W = max(1, R - L)
+                H = max(1, B - T)
+                win32gui.SetWindowPos(
+                    hwnd, 0, L, T, W, H,
+                    win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
+                )
+            except Exception:
+                pass
 
     def handle_list_windows(
         arguments: dict[str, Any],
@@ -489,13 +596,14 @@ if IS_WINDOWS:
             work_width = right - left
             work_height = bottom - top
             
-            x = left
-            y = top
-            width = work_width // 2
-            height = work_height
+            # Target visible frame bounds (left half)
+            target_left = left
+            target_top = top
+            target_right = left + (work_width // 2)
+            target_bottom = bottom
             
-            flags = win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
-            win32gui.SetWindowPos(hwnd, 0, x, y, width, height, flags)
+            # Use improved bounds function that accounts for window chrome/shadow
+            _apply_window_bounds_win(hwnd, (target_left, target_top, target_right, target_bottom))
             
             window_data = _get_window_data(hwnd)
             result = {"success": True, "action": "snap_window_left", "window": window_data}
@@ -531,13 +639,14 @@ if IS_WINDOWS:
             work_width = right - left
             work_height = bottom - top
             
-            x = left + (work_width // 2)
-            y = top
-            width = work_width - (work_width // 2)  # Remaining half
-            height = work_height
+            # Target visible frame bounds (right half)
+            target_left = left + (work_width // 2)
+            target_top = top
+            target_right = right
+            target_bottom = bottom
             
-            flags = win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
-            win32gui.SetWindowPos(hwnd, 0, x, y, width, height, flags)
+            # Use improved bounds function that accounts for window chrome/shadow
+            _apply_window_bounds_win(hwnd, (target_left, target_top, target_right, target_bottom))
             
             window_data = _get_window_data(hwnd)
             result = {"success": True, "action": "snap_window_right", "window": window_data}
@@ -573,13 +682,14 @@ if IS_WINDOWS:
             work_width = right - left
             work_height = bottom - top
             
-            x = left
-            y = top
-            width = work_width
-            height = work_height // 2
+            # Target visible frame bounds (top half)
+            target_left = left
+            target_top = top
+            target_right = right
+            target_bottom = top + (work_height // 2)
             
-            flags = win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
-            win32gui.SetWindowPos(hwnd, 0, x, y, width, height, flags)
+            # Use improved bounds function that accounts for window chrome/shadow
+            _apply_window_bounds_win(hwnd, (target_left, target_top, target_right, target_bottom))
             
             window_data = _get_window_data(hwnd)
             result = {"success": True, "action": "snap_window_top", "window": window_data}
@@ -615,13 +725,14 @@ if IS_WINDOWS:
             work_width = right - left
             work_height = bottom - top
             
-            x = left
-            y = top + (work_height // 2)
-            width = work_width
-            height = work_height - (work_height // 2)  # Remaining half
+            # Target visible frame bounds (bottom half)
+            target_left = left
+            target_top = top + (work_height // 2)
+            target_right = right
+            target_bottom = bottom
             
-            flags = win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
-            win32gui.SetWindowPos(hwnd, 0, x, y, width, height, flags)
+            # Use improved bounds function that accounts for window chrome/shadow
+            _apply_window_bounds_win(hwnd, (target_left, target_top, target_right, target_bottom))
             
             window_data = _get_window_data(hwnd)
             result = {"success": True, "action": "snap_window_bottom", "window": window_data}
@@ -1030,10 +1141,20 @@ elif IS_DARWIN:
             result = {"error": "'hwnd' or 'window_id' parameter is required"}
             return format_response(result, state)
         
+        # Use visibleFrame to account for dock and menu bar
         script = f'''
         tell application "System Events"
             tell application process whose frontmost is true
-                set bounds of window id {window_id} to {{0, 0, (screen width / 2), screen height}}
+                set screenBounds to bounds of window id {window_id}
+                set screenWidth to screen width
+                set screenHeight to screen height
+                -- Use visibleFrame calculation (approximate if menu bar is ~25px)
+                set visibleTop to 25
+                set visibleHeight to screenHeight - visibleTop
+                -- Assume dock is ~60px high at bottom if present
+                set dockHeight to 60
+                set visibleHeight to visibleHeight - dockHeight
+                set bounds of window id {window_id} to {{0, visibleTop, (screenWidth / 2), visibleTop + visibleHeight}}
             end tell
         end tell
         '''
@@ -1057,10 +1178,19 @@ elif IS_DARWIN:
             result = {"error": "'hwnd' or 'window_id' parameter is required"}
             return format_response(result, state)
         
+        # Use visibleFrame to account for dock and menu bar
         script = f'''
         tell application "System Events"
             tell application process whose frontmost is true
-                set bounds of window id {window_id} to {{(screen width / 2), 0, screen width, screen height}}
+                set screenWidth to screen width
+                set screenHeight to screen height
+                -- Use visibleFrame calculation (approximate if menu bar is ~25px)
+                set visibleTop to 25
+                set visibleHeight to screenHeight - visibleTop
+                -- Assume dock is ~60px high at bottom if present
+                set dockHeight to 60
+                set visibleHeight to visibleHeight - dockHeight
+                set bounds of window id {window_id} to {{(screenWidth / 2), visibleTop, screenWidth, visibleTop + visibleHeight}}
             end tell
         end tell
         '''
@@ -1084,10 +1214,19 @@ elif IS_DARWIN:
             result = {"error": "'hwnd' or 'window_id' parameter is required"}
             return format_response(result, state)
         
+        # Use visibleFrame to account for dock and menu bar
         script = f'''
         tell application "System Events"
             tell application process whose frontmost is true
-                set bounds of window id {window_id} to {{0, 0, screen width, (screen height / 2)}}
+                set screenWidth to screen width
+                set screenHeight to screen height
+                -- Use visibleFrame calculation (approximate if menu bar is ~25px)
+                set visibleTop to 25
+                set visibleHeight to screenHeight - visibleTop
+                -- Assume dock is ~60px high at bottom if present
+                set dockHeight to 60
+                set visibleHeight to visibleHeight - dockHeight
+                set bounds of window id {window_id} to {{0, visibleTop, screenWidth, visibleTop + (visibleHeight / 2)}}
             end tell
         end tell
         '''
@@ -1111,10 +1250,20 @@ elif IS_DARWIN:
             result = {"error": "'hwnd' or 'window_id' parameter is required"}
             return format_response(result, state)
         
+        # Use visibleFrame to account for dock and menu bar
         script = f'''
         tell application "System Events"
             tell application process whose frontmost is true
-                set bounds of window id {window_id} to {{0, (screen height / 2), screen width, screen height}}
+                set screenWidth to screen width
+                set screenHeight to screen height
+                -- Use visibleFrame calculation (approximate if menu bar is ~25px)
+                set visibleTop to 25
+                set visibleHeight to screenHeight - visibleTop
+                -- Assume dock is ~60px high at bottom if present
+                set dockHeight to 60
+                set visibleHeight to visibleHeight - dockHeight
+                set midPoint to visibleTop + (visibleHeight / 2)
+                set bounds of window id {window_id} to {{0, midPoint, screenWidth, visibleTop + visibleHeight}}
             end tell
         end tell
         '''
