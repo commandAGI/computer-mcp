@@ -115,9 +115,12 @@ if IS_WINDOWS:
         try:
             import win32gui
             import win32con
+            import time
             placement = win32gui.GetWindowPlacement(hwnd)
             if placement[1] == win32con.SW_SHOWMAXIMIZED:
                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                # Small delay to let Windows finish restoring
+                time.sleep(0.05)
         except Exception:
             pass
 
@@ -187,16 +190,26 @@ if IS_WINDOWS:
         try:
             import win32gui
             import win32con
+            import time
             
             L, T, R, B = target_ltrb
             W = max(1, R - L)
             H = max(1, B - T)
+            
+            # Ensure window is not maximized before attempting to resize
+            placement = win32gui.GetWindowPlacement(hwnd)
+            if placement[1] == win32con.SW_SHOWMAXIMIZED:
+                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                time.sleep(0.05)
             
             # First, set approximate outer bounds
             win32gui.SetWindowPos(
                 hwnd, 0, L, T, W, H,
                 win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE | win32con.SWP_SHOWWINDOW
             )
+            
+            # Small delay to let Windows apply the change
+            time.sleep(0.02)
             
             # Measure actual visible frame and outer bounds
             visL, visT, visR, visB = _get_visible_frame_win(hwnd)
@@ -229,6 +242,13 @@ if IS_WINDOWS:
             try:
                 import win32gui
                 import win32con
+                import time
+                # Ensure window is not maximized
+                placement = win32gui.GetWindowPlacement(hwnd)
+                if placement[1] == win32con.SW_SHOWMAXIMIZED:
+                    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                    time.sleep(0.05)
+                
                 L, T, R, B = target_ltrb
                 W = max(1, R - L)
                 H = max(1, B - T)
