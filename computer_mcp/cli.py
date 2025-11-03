@@ -30,7 +30,7 @@ def print_result(result: dict[str, Any], as_json: bool = False):
             if "text" in result:
                 print(f"   Typed: {result['text']}")
             if "button" in result:
-                print(f"   Button: {result['button']")
+                print(f"   Button: {result['button']}")
             if "window" in result:
                 print(f"   Window: {result['window'].get('title', 'Unknown')}")
         else:

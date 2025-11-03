@@ -1,3 +1,0 @@
-MCP Server Test - File created at 77805.687
-This file was created by the test agent to verify the MCP server setup.
-The server responded successfully to tool calls above.

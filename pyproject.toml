@@ -36,6 +36,9 @@ dependencies = [
 windows = ["pywin32>=306"]
 macos = ["pyobjc-framework-Quartz>=10.0"]  # Optional, AppleScript fallback available
 linux = ["PyGObject>=3.44"]  # Optional, requires: sudo apt install python3-gi gir1.2-atspi-2.0
+api = ["fastapi>=0.100.0", "uvicorn>=0.23.0"]
+http = ["aiohttp>=3.9.0"]
+dev = ["fastapi>=0.100.0", "uvicorn>=0.23.0", "aiohttp>=3.9.0"]
 
 [project.urls]
 Homepage = "https://commandagi.com"
@@ -45,11 +48,6 @@ Documentation = "https://github.com/commandAGI/computer-mcp#readme"
 
 [project.scripts]
 computer-mcp = "computer_mcp.main:entry_point"
-
-[project.optional-dependencies]
-api = ["fastapi>=0.100.0", "uvicorn>=0.23.0"]
-http = ["aiohttp>=3.9.0"]
-dev = ["fastapi>=0.100.0", "uvicorn>=0.23.0", "aiohttp>=3.9.0"]
 
 [tool.setuptools]
 packages = ["computer_mcp", "computer_mcp.core", "computer_mcp.actions", "computer_mcp.resources"]
