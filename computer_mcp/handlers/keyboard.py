@@ -9,6 +9,13 @@ from computer_mcp.core.response import format_response
 from computer_mcp.core.state import ComputerState
 from computer_mcp.core.utils import is_hotkey_disallowed, key_from_string
 
+from computer_mcp.actions.keyboard import (
+    type_text_to_window,
+    key_down_to_window,
+    key_up_to_window,
+    key_press_to_window,
+)
+
 
 def _is_modifier_key(key) -> bool:
     """Check if a key is a modifier key."""
@@ -27,6 +34,15 @@ def handle_type(
 ) -> list[Union[TextContent, ImageContent]]:
     """Handle type action."""
     text = arguments["text"]
+    
+    # Check if window targeting is requested
+    window_id = arguments.get("hwnd") or arguments.get("window_id")
+    if window_id is not None:
+        # Use window-targeted typing
+        result = type_text_to_window(text, window_id)
+        return format_response(result, state)
+    
+    # Default to global keyboard input
     keyboard_controller.type(text)
     result = {"success": True, "action": "type", "text": text}
     return format_response(result, state)
@@ -39,6 +55,15 @@ def handle_key_down(
 ) -> list[Union[TextContent, ImageContent]]:
     """Handle key_down action."""
     key_str = arguments["key"]
+    
+    # Check if window targeting is requested
+    window_id = arguments.get("hwnd") or arguments.get("window_id")
+    if window_id is not None:
+        # Use window-targeted key down
+        result = key_down_to_window(key_str, window_id)
+        return format_response(result, state)
+    
+    # Default to global keyboard input
     key = key_from_string(key_str)
     
     # Check if this hotkey is disallowed
@@ -70,6 +95,15 @@ def handle_key_up(
 ) -> list[Union[TextContent, ImageContent]]:
     """Handle key_up action."""
     key_str = arguments["key"]
+    
+    # Check if window targeting is requested
+    window_id = arguments.get("hwnd") or arguments.get("window_id")
+    if window_id is not None:
+        # Use window-targeted key up
+        result = key_up_to_window(key_str, window_id)
+        return format_response(result, state)
+    
+    # Default to global keyboard input
     key = key_from_string(key_str)
     keyboard_controller.release(key)
     
@@ -100,6 +134,15 @@ def handle_key_press(
 ) -> list[Union[TextContent, ImageContent]]:
     """Handle key_press action."""
     key_str = arguments["key"]
+    
+    # Check if window targeting is requested
+    window_id = arguments.get("hwnd") or arguments.get("window_id")
+    if window_id is not None:
+        # Use window-targeted key press
+        result = key_press_to_window(key_str, window_id)
+        return format_response(result, state)
+    
+    # Default to global keyboard input
     key = key_from_string(key_str)
     
     # Check if this hotkey is disallowed
