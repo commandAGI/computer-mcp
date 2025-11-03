@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "computer-mcp"
-version = "0.0.2"
+version = "0.0.3"
 description = "Cross-platform MCP server for computer automation and control"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -47,4 +47,7 @@ Documentation = "https://github.com/commandAGI/computer-mcp#readme"
 computer-mcp = "computer_mcp.main:entry_point"
 
 [tool.setuptools]
-packages = ["computer_mcp", "computer_mcp.core", "computer_mcp.handlers"]
+packages = ["computer_mcp", "computer_mcp.core", "computer_mcp.handlers", "computer_mcp.resources"]
+
+[tool.setuptools.package-data]
+computer_mcp = ["resources/VirtualDesktopAccessor.dll"]

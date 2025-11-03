@@ -1,11 +1,55 @@
-"""Windows Virtual Desktop API wrapper using VirtualDesktopAccessor.dll."""
+"""Windows Virtual Desktop API wrapper using VirtualDesktopAccessor.dll.
+
+This module uses VirtualDesktopAccessor.dll from:
+https://github.com/Ciantic/VirtualDesktopAccessor
+
+The DLL is distributed with this package under the MIT License.
+See: https://github.com/Ciantic/VirtualDesktopAccessor/blob/rust/LICENSE.txt
+"""
 
 import ctypes
 from pathlib import Path
 from typing import Optional
 
-# Path to the DLL relative to this package
-_DLL_PATH = Path(__file__).parent.parent.parent / "resources" / "VirtualDesktopAccessor.dll"
+def _find_dll_path() -> Optional[Path]:
+    """Find the VirtualDesktopAccessor.dll path, checking multiple locations."""
+    # Try development path (when running from source at project root)
+    dev_path = Path(__file__).parent.parent.parent / "resources" / "VirtualDesktopAccessor.dll"
+    if dev_path.exists():
+        return dev_path
+    
+    # Try development path (when running from source with DLL in package)
+    dev_pkg_path = Path(__file__).parent.parent / "resources" / "VirtualDesktopAccessor.dll"
+    if dev_pkg_path.exists():
+        return dev_pkg_path
+    
+    # Try using importlib.resources (preferred for installed packages)
+    try:
+        import importlib.resources as pkg_resources
+        # Access the DLL from package_data
+        try:
+            with pkg_resources.path("computer_mcp.resources", "VirtualDesktopAccessor.dll") as dll_path:
+                if dll_path.exists():
+                    return Path(dll_path)
+        except (ModuleNotFoundError, FileNotFoundError):
+            # Fallback: try to find it relative to package
+            with pkg_resources.path("computer_mcp", "__init__.py") as pkg_init:
+                pkg_root = pkg_init.parent
+                dll_in_pkg = pkg_root / "resources" / "VirtualDesktopAccessor.dll"
+                if dll_in_pkg.exists():
+                    return dll_in_pkg
+    except (ImportError, Exception):
+        pass
+    
+    # Fallback: try installed package path (same directory as module)
+    installed_path = Path(__file__).parent / "VirtualDesktopAccessor.dll"
+    if installed_path.exists():
+        return installed_path
+    
+    return None
+
+# Path to the DLL - resolved at runtime
+_DLL_PATH = _find_dll_path()
 
 # Load the DLL
 _vda_dll: Optional[ctypes.CDLL] = None
