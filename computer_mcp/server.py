@@ -8,7 +8,7 @@ from pynput.keyboard import Controller as KeyboardController
 from pynput.mouse import Controller as MouseController
 
 from computer_mcp.core.state import ComputerState
-from computer_mcp.handlers import config, keyboard, mouse, screenshot, window
+from computer_mcp.handlers import config, keyboard, mouse, screenshot, terminal, window
 
 
 # Global state instance
@@ -254,6 +254,12 @@ async def list_tools() -> list[Tool]:
                         "type": "boolean",
                         "description": "Track and include system performance metrics (CPU, memory, disk I/O, network I/O)",
                         "default": False
+                    },
+                    "terminal_output_mode": {
+                        "type": "string",
+                        "enum": ["chars", "text"],
+                        "description": "How to return terminal output: 'chars' (array of characters) or 'text' (accumulated string). Default: 'chars'",
+                        "default": "chars"
                     }
                 }
             }
@@ -545,6 +551,107 @@ async def list_tools() -> list[Tool]:
                 "required": ["hwnd", "desktop_id"]
             }
         ),
+        Tool(
+            name="spawn_terminal",
+            description="Spawn a new terminal process. Terminal lives for the server lifetime.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "command": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Command to execute (list of args). If not provided, uses platform default (pwsh/powershell/cmd on Windows, bash/sh on Linux/macOS)"
+                    },
+                    "shell": {
+                        "type": "boolean",
+                        "description": "Whether to run in shell mode",
+                        "default": False
+                    }
+                }
+            }
+        ),
+        Tool(
+            name="list_terminals",
+            description="List all active terminal processes with their PIDs and status",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        ),
+        Tool(
+            name="send_terminal_text",
+            description="Send text input to a terminal process",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pid": {
+                        "type": "integer",
+                        "description": "Terminal process ID (from spawn_terminal or list_terminals)"
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "Text to send to terminal stdin"
+                    }
+                },
+                "required": ["pid", "text"]
+            }
+        ),
+        Tool(
+            name="read_terminal_output",
+            description="Read output from a terminal process. Returns characters array or text string based on terminal_output_mode config (default: chars)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pid": {
+                        "type": "integer",
+                        "description": "Terminal process ID"
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "Maximum number of characters to read (optional, returns all available if not specified)"
+                    }
+                },
+                "required": ["pid"]
+            }
+        ),
+        Tool(
+            name="send_terminal_key",
+            description="Send key event (down/up) to a terminal process. Uses same key format as keyboard tools.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pid": {
+                        "type": "integer",
+                        "description": "Terminal process ID"
+                    },
+                    "key": {
+                        "type": "string",
+                        "description": "Key to send (e.g., 'a', 'ctrl', 'enter', 'ctrl+c')"
+                    },
+                    "event": {
+                        "type": "string",
+                        "enum": ["down", "up"],
+                        "description": "Key event type",
+                        "default": "down"
+                    }
+                },
+                "required": ["pid", "key"]
+            }
+        ),
+        Tool(
+            name="close_terminal",
+            description="Close/kill a terminal process by PID",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pid": {
+                        "type": "integer",
+                        "description": "Terminal process ID to close"
+                    }
+                },
+                "required": ["pid"]
+            }
+        ),
     ]
 
 
@@ -598,6 +705,12 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[Union[TextCont
             "list_virtual_desktops": window.handle_list_virtual_desktops,
             "switch_virtual_desktop": window.handle_switch_virtual_desktop,
             "move_window_to_virtual_desktop": window.handle_move_window_to_virtual_desktop,
+            "spawn_terminal": terminal.handle_spawn_terminal,
+            "list_terminals": terminal.handle_list_terminals,
+            "send_terminal_text": terminal.handle_send_terminal_text,
+            "read_terminal_output": terminal.handle_read_terminal_output,
+            "send_terminal_key": terminal.handle_send_terminal_key,
+            "close_terminal": terminal.handle_close_terminal,
         }
         
         if name in handlers:
@@ -606,7 +719,14 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[Union[TextCont
                 controller = mouse_controller
             elif "key" in name or name == "type":
                 controller = keyboard_controller
-            return handlers[name](arguments, computer_state, controller)
+            
+            handler = handlers[name]
+            # Check if handler is async (coroutine function)
+            import inspect
+            if inspect.iscoroutinefunction(handler):
+                return await handler(arguments, computer_state, controller)
+            else:
+                return handler(arguments, computer_state, controller)
         else:
             return [TextContent(type="text", text=json.dumps({"error": f"Unknown tool: {name}"}))]
     

@@ -13,6 +13,7 @@ def set_config(
     disallowed_hotkeys: list[str] | None = None,
     constrain_mouse_to_window: int | str | None = None,
     observe_system_metrics: bool | None = None,
+    terminal_output_mode: str | None = None,
     config_dict: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     """Update configuration settings.
@@ -42,6 +43,7 @@ def set_config(
         "disallowed_hotkeys": disallowed_hotkeys,
         "constrain_mouse_to_window": constrain_mouse_to_window,
         "observe_system_metrics": observe_system_metrics,
+        "terminal_output_mode": terminal_output_mode,
     }
     
     # Remove None values

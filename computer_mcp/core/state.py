@@ -23,6 +23,7 @@ class ComputerState:
             "disallowed_hotkeys": [],  # List of hotkey strings (e.g., ["ctrl+c", "alt+f4"])
             "constrain_mouse_to_window": None,  # None (disabled), int (hwnd), or str (window title pattern)
             "observe_system_metrics": False,  # Track system performance metrics
+            "terminal_output_mode": "chars",  # "chars" or "text" - how to return terminal output
         }
         self.mouse_position = (0, 0)
         self.mouse_buttons = set()

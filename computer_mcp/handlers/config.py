@@ -42,6 +42,16 @@ def handle_set_config(
     if "observe_system_metrics" in arguments:
         state.config["observe_system_metrics"] = arguments["observe_system_metrics"]
     
+    if "terminal_output_mode" in arguments:
+        terminal_output_mode = arguments["terminal_output_mode"]
+        if terminal_output_mode not in ("chars", "text"):
+            result = {
+                "error": "terminal_output_mode must be 'chars' or 'text'",
+                "action": "set_config"
+            }
+            return format_response(result, state)
+        state.config["terminal_output_mode"] = terminal_output_mode
+    
     result = {
         "success": True,
         "action": "set_config",
