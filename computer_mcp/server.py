@@ -8,7 +8,7 @@ from pynput.keyboard import Controller as KeyboardController
 from pynput.mouse import Controller as MouseController
 
 from computer_mcp.core.state import ComputerState
-from computer_mcp.handlers import config, keyboard, mouse, screenshot
+from computer_mcp.handlers import config, keyboard, mouse, screenshot, window
 
 
 # Global state instance
@@ -236,6 +236,293 @@ async def list_tools() -> list[Tool]:
                 }
             }
         ),
+        Tool(
+            name="list_windows",
+            description="List all visible windows with their handles, titles, processes, and bounds",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        ),
+        Tool(
+            name="switch_to_window",
+            description="Switch focus to a window by handle or title pattern",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle (from list_windows)"
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Window title pattern to search for (alternative to hwnd)"
+                    }
+                },
+                "oneOf": [
+                    {"required": ["hwnd"]},
+                    {"required": ["title"]}
+                ]
+            }
+        ),
+        Tool(
+            name="move_window",
+            description="Move and/or resize a window to specified position and size",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle"
+                    },
+                    "x": {
+                        "type": "integer",
+                        "description": "X coordinate for window position"
+                    },
+                    "y": {
+                        "type": "integer",
+                        "description": "Y coordinate for window position"
+                    },
+                    "width": {
+                        "type": "integer",
+                        "description": "Window width (optional, preserves current if not specified)"
+                    },
+                    "height": {
+                        "type": "integer",
+                        "description": "Window height (optional, preserves current if not specified)"
+                    }
+                },
+                "required": ["hwnd", "x", "y"]
+            }
+        ),
+        Tool(
+            name="resize_window",
+            description="Resize a window to specified dimensions",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle"
+                    },
+                    "width": {
+                        "type": "integer",
+                        "description": "Window width"
+                    },
+                    "height": {
+                        "type": "integer",
+                        "description": "Window height"
+                    }
+                },
+                "required": ["hwnd", "width", "height"]
+            }
+        ),
+        Tool(
+            name="minimize_window",
+            description="Minimize a window",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle"
+                    }
+                },
+                "required": ["hwnd"]
+            }
+        ),
+        Tool(
+            name="maximize_window",
+            description="Maximize a window",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle"
+                    }
+                },
+                "required": ["hwnd"]
+            }
+        ),
+        Tool(
+            name="restore_window",
+            description="Restore a minimized or maximized window to normal state",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle"
+                    }
+                },
+                "required": ["hwnd"]
+            }
+        ),
+        Tool(
+            name="set_window_topmost",
+            description="Set or remove a window's always-on-top property",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle"
+                    },
+                    "topmost": {
+                        "type": "boolean",
+                        "description": "Whether window should be always on top",
+                        "default": True
+                    }
+                },
+                "required": ["hwnd"]
+            }
+        ),
+        Tool(
+            name="get_window_info",
+            description="Get detailed information about a window",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle"
+                    }
+                },
+                "required": ["hwnd"]
+            }
+        ),
+        Tool(
+            name="close_window",
+            description="Close a window",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle"
+                    }
+                },
+                "required": ["hwnd"]
+            }
+        ),
+        Tool(
+            name="snap_window_left",
+            description="Snap window to fill left half of screen",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle"
+                    }
+                },
+                "required": ["hwnd"]
+            }
+        ),
+        Tool(
+            name="snap_window_right",
+            description="Snap window to fill right half of screen",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle"
+                    }
+                },
+                "required": ["hwnd"]
+            }
+        ),
+        Tool(
+            name="snap_window_top",
+            description="Snap window to fill top half of screen",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle"
+                    }
+                },
+                "required": ["hwnd"]
+            }
+        ),
+        Tool(
+            name="snap_window_bottom",
+            description="Snap window to fill bottom half of screen",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle"
+                    }
+                },
+                "required": ["hwnd"]
+            }
+        ),
+        Tool(
+            name="screenshot_window",
+            description="Capture screenshot of a specific window",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle"
+                    }
+                },
+                "required": ["hwnd"]
+            }
+        ),
+        Tool(
+            name="list_virtual_desktops",
+            description="List all virtual desktops with their IDs and names",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        ),
+        Tool(
+            name="switch_virtual_desktop",
+            description="Switch to a virtual desktop by ID or name",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "desktop_id": {
+                        "type": "integer",
+                        "description": "Virtual desktop ID (0-indexed)"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Virtual desktop name (alternative to desktop_id)"
+                    }
+                },
+                "oneOf": [
+                    {"required": ["desktop_id"]},
+                    {"required": ["name"]}
+                ]
+            }
+        ),
+        Tool(
+            name="move_window_to_virtual_desktop",
+            description="Move a window to a different virtual desktop",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hwnd": {
+                        "type": "integer",
+                        "description": "Window handle"
+                    },
+                    "desktop_id": {
+                        "type": "integer",
+                        "description": "Target virtual desktop ID"
+                    }
+                },
+                "required": ["hwnd", "desktop_id"]
+            }
+        ),
     ]
 
 
@@ -271,10 +558,33 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[Union[TextCont
             "key_press": keyboard.handle_key_press,
             "screenshot": screenshot.handle_screenshot,
             "set_config": config.handle_set_config,
+            "list_windows": window.handle_list_windows,
+            "switch_to_window": window.handle_switch_to_window,
+            "move_window": window.handle_move_window,
+            "resize_window": window.handle_resize_window,
+            "minimize_window": window.handle_minimize_window,
+            "maximize_window": window.handle_maximize_window,
+            "restore_window": window.handle_restore_window,
+            "set_window_topmost": window.handle_set_window_topmost,
+            "get_window_info": window.handle_get_window_info,
+            "close_window": window.handle_close_window,
+            "snap_window_left": window.handle_snap_window_left,
+            "snap_window_right": window.handle_snap_window_right,
+            "snap_window_top": window.handle_snap_window_top,
+            "snap_window_bottom": window.handle_snap_window_bottom,
+            "screenshot_window": window.handle_screenshot_window,
+            "list_virtual_desktops": window.handle_list_virtual_desktops,
+            "switch_virtual_desktop": window.handle_switch_virtual_desktop,
+            "move_window_to_virtual_desktop": window.handle_move_window_to_virtual_desktop,
         }
         
         if name in handlers:
-            return handlers[name](arguments, computer_state, mouse_controller if "mouse" in name or name == "drag" else keyboard_controller)
+            controller = None
+            if "mouse" in name or name == "drag":
+                controller = mouse_controller
+            elif "key" in name or name == "type":
+                controller = keyboard_controller
+            return handlers[name](arguments, computer_state, controller)
         else:
             return [TextContent(type="text", text=json.dumps({"error": f"Unknown tool: {name}"}))]
     
