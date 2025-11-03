@@ -20,10 +20,15 @@ class ComputerState:
             "observe_keyboard_key_states": False,
             "observe_focused_app": False,
             "observe_accessibility_tree": False,
+            "disallowed_hotkeys": [],  # List of hotkey strings (e.g., ["ctrl+c", "alt+f4"])
+            "constrain_mouse_to_window": None,  # None (disabled), int (hwnd), or str (window title pattern)
+            "observe_system_metrics": False,  # Track system performance metrics
         }
         self.mouse_position = (0, 0)
         self.mouse_buttons = set()
         self.keyboard_keys = set()
+        # Track held keys for hotkey checking (always active, not dependent on config)
+        self._held_keys_for_hotkeys = set()
         self.mouse_listener: Optional[mouse.Listener] = None
         self.keyboard_listener: Optional[keyboard.Listener] = None
         self.mouse_controller = MouseController()
@@ -116,6 +121,11 @@ class ComputerState:
         if self.config["observe_accessibility_tree"]:
             from computer_mcp.actions.accessibility_tree import get_accessibility_tree as get_accessibility_tree_impl
             state["accessibility_tree"] = get_accessibility_tree_impl()
+        
+        # System metrics
+        if self.config["observe_system_metrics"]:
+            from computer_mcp.core.system_metrics import get_system_metrics
+            state["system_metrics"] = get_system_metrics()
         
         return state
     

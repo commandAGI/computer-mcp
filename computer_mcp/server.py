@@ -232,6 +232,28 @@ async def list_tools() -> list[Tool]:
                         "type": "boolean",
                         "description": "Include accessibility tree",
                         "default": False
+                    },
+                    "disallowed_hotkeys": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "List of hotkey strings to disallow (e.g., ['ctrl+c', 'alt+f4'])",
+                        "default": []
+                    },
+                    "constrain_mouse_to_window": {
+                        "oneOf": [
+                            {"type": "null"},
+                            {"type": "integer"},
+                            {"type": "string"}
+                        ],
+                        "description": "Constrain mouse movement and clicks to window bounds. Set to window handle (int), window title pattern (str), or null to disable.",
+                        "default": None
+                    },
+                    "observe_system_metrics": {
+                        "type": "boolean",
+                        "description": "Track and include system performance metrics (CPU, memory, disk I/O, network I/O)",
+                        "default": False
                     }
                 }
             }

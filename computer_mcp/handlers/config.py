@@ -33,6 +33,15 @@ def handle_set_config(
     if "observe_accessibility_tree" in arguments:
         state.config["observe_accessibility_tree"] = arguments["observe_accessibility_tree"]
     
+    if "disallowed_hotkeys" in arguments:
+        state.config["disallowed_hotkeys"] = arguments["disallowed_hotkeys"]
+    
+    if "constrain_mouse_to_window" in arguments:
+        state.config["constrain_mouse_to_window"] = arguments["constrain_mouse_to_window"]
+    
+    if "observe_system_metrics" in arguments:
+        state.config["observe_system_metrics"] = arguments["observe_system_metrics"]
+    
     result = {
         "success": True,
         "action": "set_config",

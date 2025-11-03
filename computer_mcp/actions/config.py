@@ -10,6 +10,9 @@ def set_config(
     observe_keyboard_key_states: bool | None = None,
     observe_focused_app: bool | None = None,
     observe_accessibility_tree: bool | None = None,
+    disallowed_hotkeys: list[str] | None = None,
+    constrain_mouse_to_window: int | str | None = None,
+    observe_system_metrics: bool | None = None,
     config_dict: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     """Update configuration settings.
@@ -21,6 +24,9 @@ def set_config(
         observe_keyboard_key_states: Track and include keyboard key states
         observe_focused_app: Include focused application information
         observe_accessibility_tree: Include accessibility tree
+        disallowed_hotkeys: List of hotkey strings to disallow (e.g., ["ctrl+c", "alt+f4"])
+        constrain_mouse_to_window: Constrain mouse to window bounds (hwnd int, title str, or None to disable)
+        observe_system_metrics: Track and include system performance metrics (CPU, memory, disk, network)
         config_dict: Optional dictionary to update config from
     
     Returns:
@@ -33,6 +39,9 @@ def set_config(
         "observe_keyboard_key_states": observe_keyboard_key_states,
         "observe_focused_app": observe_focused_app,
         "observe_accessibility_tree": observe_accessibility_tree,
+        "disallowed_hotkeys": disallowed_hotkeys,
+        "constrain_mouse_to_window": constrain_mouse_to_window,
+        "observe_system_metrics": observe_system_metrics,
     }
     
     # Remove None values

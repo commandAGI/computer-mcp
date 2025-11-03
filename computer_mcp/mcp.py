@@ -242,6 +242,28 @@ async def list_tools() -> list[Tool]:
                         "type": "boolean",
                         "description": "Include accessibility tree",
                         "default": False
+                    },
+                    "disallowed_hotkeys": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "List of hotkey strings to disallow (e.g., ['ctrl+c', 'alt+f4'])",
+                        "default": []
+                    },
+                    "constrain_mouse_to_window": {
+                        "oneOf": [
+                            {"type": "null"},
+                            {"type": "integer"},
+                            {"type": "string"}
+                        ],
+                        "description": "Constrain mouse movement and clicks to window bounds. Set to window handle (int), window title pattern (str), or null to disable.",
+                        "default": None
+                    },
+                    "observe_system_metrics": {
+                        "type": "boolean",
+                        "description": "Track and include system performance metrics (CPU, memory, disk I/O, network I/O)",
+                        "default": False
                     }
                 }
             }
@@ -630,7 +652,8 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[Union[TextCont
         elif name == "set_config":
             # Update state config first
             for key in ["observe_screen", "observe_mouse_position", "observe_mouse_button_states", 
-                       "observe_keyboard_key_states", "observe_focused_app", "observe_accessibility_tree"]:
+                       "observe_keyboard_key_states", "observe_focused_app", "observe_accessibility_tree", 
+                       "disallowed_hotkeys", "constrain_mouse_to_window", "observe_system_metrics"]:
                 if key in arguments:
                     computer_state.config[key] = arguments[key]
             result = {"success": True, "action": "set_config", "config": computer_state.config.copy()}
