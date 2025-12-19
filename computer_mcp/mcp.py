@@ -252,13 +252,9 @@ async def list_tools() -> list[Tool]:
                         "default": []
                     },
                     "constrain_mouse_to_window": {
-                        "oneOf": [
-                            {"type": "null"},
-                            {"type": "integer"},
-                            {"type": "string"}
-                        ],
-                        "description": "Constrain mouse movement and clicks to window bounds. Set to window handle (int), window title pattern (str), or null to disable.",
-                        "default": None
+                        "type": "string",
+                        "description": "Constrain mouse movement and clicks to window bounds. Set to window handle (integer as string), window title pattern (string), or empty string to disable.",
+                        "default": ""
                     },
                     "observe_system_metrics": {
                         "type": "boolean",
@@ -278,7 +274,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="switch_to_window",
-            description="Switch focus to a window by handle or title pattern",
+            description="Switch focus to a window by handle or title pattern. Provide either hwnd OR title (not both).",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -290,11 +286,7 @@ async def list_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Window title pattern to search for (alternative to hwnd)"
                     }
-                },
-                "oneOf": [
-                    {"required": ["hwnd"]},
-                    {"required": ["title"]}
-                ]
+                }
             }
         ),
         Tool(
@@ -518,7 +510,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="switch_virtual_desktop",
-            description="Switch to a virtual desktop by ID or name",
+            description="Switch to a virtual desktop by ID or name. Provide either desktop_id OR name (not both).",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -530,11 +522,7 @@ async def list_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Virtual desktop name (alternative to desktop_id)"
                     }
-                },
-                "oneOf": [
-                    {"required": ["desktop_id"]},
-                    {"required": ["name"]}
-                ]
+                }
             }
         ),
         Tool(
@@ -651,11 +639,20 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[Union[TextCont
         # Config actions
         elif name == "set_config":
             # Update state config first
-            for key in ["observe_screen", "observe_mouse_position", "observe_mouse_button_states", 
-                       "observe_keyboard_key_states", "observe_focused_app", "observe_accessibility_tree", 
-                       "disallowed_hotkeys", "constrain_mouse_to_window", "observe_system_metrics"]:
+            for key in ["observe_screen", "observe_mouse_position", "observe_mouse_button_states",
+                       "observe_keyboard_key_states", "observe_focused_app", "observe_accessibility_tree",
+                       "disallowed_hotkeys", "observe_system_metrics"]:
                 if key in arguments:
                     computer_state.config[key] = arguments[key]
+            # Handle constrain_mouse_to_window separately - convert string to appropriate type
+            if "constrain_mouse_to_window" in arguments:
+                value = arguments["constrain_mouse_to_window"]
+                if value == "" or value is None:
+                    computer_state.config["constrain_mouse_to_window"] = None
+                elif value.isdigit():
+                    computer_state.config["constrain_mouse_to_window"] = int(value)
+                else:
+                    computer_state.config["constrain_mouse_to_window"] = value
             result = {"success": True, "action": "set_config", "config": computer_state.config.copy()}
         
         # Window actions

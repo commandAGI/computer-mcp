@@ -242,13 +242,9 @@ async def list_tools() -> list[Tool]:
                         "default": []
                     },
                     "constrain_mouse_to_window": {
-                        "oneOf": [
-                            {"type": "null"},
-                            {"type": "integer"},
-                            {"type": "string"}
-                        ],
-                        "description": "Constrain mouse movement and clicks to window bounds. Set to window handle (int), window title pattern (str), or null to disable.",
-                        "default": None
+                        "type": "string",
+                        "description": "Constrain mouse movement and clicks to window bounds. Set to window handle (integer as string), window title pattern (string), or empty string to disable.",
+                        "default": ""
                     },
                     "observe_system_metrics": {
                         "type": "boolean",
@@ -274,7 +270,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="switch_to_window",
-            description="Switch focus to a window by handle or title pattern",
+            description="Switch focus to a window by handle or title pattern. Provide either hwnd OR title (not both).",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -286,11 +282,7 @@ async def list_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Window title pattern to search for (alternative to hwnd)"
                     }
-                },
-                "oneOf": [
-                    {"required": ["hwnd"]},
-                    {"required": ["title"]}
-                ]
+                }
             }
         ),
         Tool(
@@ -514,7 +506,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="switch_virtual_desktop",
-            description="Switch to a virtual desktop by ID or name",
+            description="Switch to a virtual desktop by ID or name. Provide either desktop_id OR name (not both).",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -526,11 +518,7 @@ async def list_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Virtual desktop name (alternative to desktop_id)"
                     }
-                },
-                "oneOf": [
-                    {"required": ["desktop_id"]},
-                    {"required": ["name"]}
-                ]
+                }
             }
         ),
         Tool(
